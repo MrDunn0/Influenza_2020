@@ -1,0 +1,8 @@
+gene_name	pos	ref	alt	tool	gap	true_pos
+A_NP	266	C	T	IRMA	0	266
+A_NP	653	C	T	IRMA	0	653
+A_NP	1398	C	T	IRMA	0	1398
+A_NP	1421	C	T	IRMA	0	1421
+A_NP	569	A	C	BWAcycle	0	569
+A_NP	746	T	C	BWAcycle	0	746
+A_NP	1518	A	G	BWAcycle	0	1518

@@ -1,0 +1,6 @@
+gene_name	pos	ref	alt	tool	gap	true_pos
+A_PA	884	C	T	IRMA	24	908
+A_PA	908	C	T	IRMA	24	932
+A_PA	1179	C	T	IRMA	24	1203
+A_PA	1545	C	T	IRMA	24	1569
+A_PA	2057	T	C	IRMA	24	2081

@@ -1,0 +1,5 @@
+gene_name	pos	ref	alt	tool	gap	true_pos
+A_NA_N2	317	T	C	IRMA	0	317
+A_NA_N2	318	T	C	IRMA	0	318
+A_NA_N2	631	C	T	IRMA	0	631
+A_NA_N2	1039	C	T	IRMA	0	1039
