@@ -6,10 +6,14 @@ to compare different tools designed for Influenza virus whole-genome NGS data an
 **Tools to compare:**
 
 [1. BWAcycle – Research Institute of Influenza](https://github.com/Molecular-virology-lab/bwacycle)
+
 [2. IRMA – CDC Atlanta](https://wonder.cdc.gov/amd/flu/irma/)
+
 [3. InsaFLU – Instituto Nacional de Saude (INSA) Doutor Ricardo Jorge](https://github.com/INSaFLU/INSaFLU)
+
 [4. FluLINE – WHO CC Melbourne](https://github.com/UmaSangumathi/FluLINE)
-[5. FluSeq – Singapore](https://github.com/hkailee/FluSeq
+
+[5. FluSeq – Singapore](https://github.com/hkailee/FluSeq)
 
 
 **analyzer.py** is a script that processes the BWAcycle, IRMA, and INSaFLU (this list may expand in the near future) outputs  and draws graphs comparing coverage and found SNPs for each gene. Now it supports only INSaFLU web-version output for Illumina reads (If the output for other technologies is the same, then it also supports them, but we didn't succeded in processing nanopore reads with INSaFLU).
