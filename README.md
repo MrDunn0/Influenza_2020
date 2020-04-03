@@ -38,13 +38,13 @@ Since this is the first very crude version, there are problems with file paths, 
 
 Python 3 libs:
 
-pandas 1.0.1
+-pandas 1.0.1
 
-matplotlib 3.1.3
+-matplotlib 3.1.3
 
-plotnine 0.6.0
+-plotnine 0.6.0
 
-biopython 1.76
+-biopython 1.76
 
 Out of Python:
 
