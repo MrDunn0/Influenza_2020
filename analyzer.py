@@ -1,8 +1,10 @@
-# This is a script for comparing outputs of tools analyzing the influenza virus
-# -*- coding: utf-8 -*-
-# argv[1] - always bwacycle sample dir
-# argv[2] - always irma sample dir
-# argv[3] - insaFLU sample dir(optional)
+"""
+This is a script for comparing outputs of tools analyzing the influenza virus
+argv[1] - always BWAcycle sample dir
+argv[2] - always IRMA sample dir
+argv[3] - INSaFLU sample dir(optional)
+"""
+
 import glob
 from sys import argv
 import os
@@ -12,6 +14,10 @@ import subprocess
 from Bio import SeqIO
 from plotnine import *
 
+"""
+The following tuples are needed at all stages of the script. The logic of the script is based on the fact that the names 
+of the genes are sorted the same way, despite the fact that in the analyzed instruments these names are different.
+"""
 GENE_NAMES = ("HA", "M", "NA", "NP", "NS", "PA", "PB1", "PB2")
 ORDERED_GENES = ("PB2", "PB1", "PA", "HA", "NP", "NA", "M", "NS")
 
@@ -34,6 +40,7 @@ def get_irma_fasta_paths(path_to_sample_dir):
 
 
 def get_bwacycle_gene_coverage(path_to_coverage_file):  # coverage_file - SampleName_GeneName.table file
+    """Returns a list with coverage values stored in the 10th column of the corresponding file for a single gene"""
     with open(path_to_coverage_file, "r") as file:
         file.readline()
         coverage = []
@@ -45,13 +52,15 @@ def get_bwacycle_gene_coverage(path_to_coverage_file):  # coverage_file - Sample
         return coverage
 
 
-def get_irma_gene_coverage(path_to_coverage_file):
+def get_irma_gene_coverage(path_to_coverage_file):  # coverage_file - GeneName-coverage.txt
+    """Returns a list with coverage values stored in the 3th column of the corresponding file for a single gene"""
     with open(path_to_coverage_file, "r") as file:
         file.readline()
         return [line.split()[2] for line in file]
 
 
-def get_insaflu_gene_coverage(path_to_insaflu_dir):
+def get_insaflu_gene_coverage(path_to_insaflu_dir):  # coverage_file - coverage.tsv
+    """Returns a list with mean coverage values for all genes in the GENE_NAMES tuple order"""
     with open(f"{path_to_insaflu_dir}/coverage.tsv", "r") as coverage_file:
         for line in coverage_file:
             if line.startswith("\"Mean"):
@@ -66,9 +75,13 @@ def get_insa_flu_fasta(path_to_sample_dir):
 
 
 def separate_genes(bwacycle_fasta, irma_fasta, insaflu_fasta=None, sample_name=""):
-    # writes appropriate genes from n files to separate fasta file.
+    """Writes appropriate genes to separate .fasta files for each tool."""
+
+    # Write all IRMA genes to single .fasta file using the command line
     subprocess.run("cat {} > {}_IRMA.fasta".format(" ".join([fasta for fasta in irma_fasta]), sample_name), shell=True)
+
     with open("{}_IRMA.fasta".format(sample_name), "r") as irma_file, open(bwacycle_fasta, "r") as bwacycle_file:
+        # Record all genes to a separate lists in the same order for each tool
         if insaflu_fasta:
             insaflu_file = open(insaflu_fasta, "r")
         bwacycle_reads = [(seq_record.id, seq_record.seq) for seq_record in SeqIO.parse(bwacycle_file, format="fasta")]
@@ -81,6 +94,8 @@ def separate_genes(bwacycle_fasta, irma_fasta, insaflu_fasta=None, sample_name="
             os.mkdir("separate_genes")
         if not os.path.exists(f"separate_genes/{sample_name}"):
             os.mkdir(f"separate_genes/{sample_name}")
+
+        # Write the same genes to a separate file
         for i in range(8):
             with open(f"separate_genes/{sample_name}/{sample_name}_{ORDERED_GENES[i]}.fasta", "w") as file:
                 file.write(">" + str(bwacycle_reads[i][0]) + "\n")
@@ -90,9 +105,12 @@ def separate_genes(bwacycle_fasta, irma_fasta, insaflu_fasta=None, sample_name="
                 if insaflu_fasta:
                     file.write(">" + str(insaflu_reads[i][0]) + "\n")
                     file.write(str(insaflu_reads[i][1]) + "\n")
+        if insaflu_fasta:
+            insaflu_file.close()
 
 
 def align_all_genes(sample_name):
+    """Runs MAFFT-multiple alignment on each of 8 genes and saves alignment files in a separate folder"""
     if not os.path.exists(f"separate_genes/{sample_name}/alignments"):
         os.mkdir(f"separate_genes/{sample_name}/alignments")
     for gene in ORDERED_GENES:
@@ -103,11 +121,11 @@ def align_all_genes(sample_name):
     print(f"Alignments are saved to separate_genes/{sample_name}")
     if len(glob.glob(f"separate_genes/{sample_name}/alignments/*aln.fa")) != 8:
         raise EightError(
-            f"The directory separate_genes/{sample_name}/alignments does not contain 8 files with alignment. Please, make sure that you deserve it."
-        )
+            f"The directory separate_genes/{sample_name}/alignments does not contain 8 files with alignment.")
 
 
 def build_gap_matrix(sample_name, insaflu=False):
+    """Counts gaps for each gene of 3 or 2 tools and saves it in SampleName_gaps.tsv file"""
     gaps = [[], [], []]  # order: bwacycle, irma, insaflu
     for i in range(8):
         with open(f"separate_genes/{sample_name}/alignments/{sample_name}_{ORDERED_GENES[i]}_aln.fa",
@@ -136,14 +154,17 @@ def build_gap_matrix(sample_name, insaflu=False):
 
 
 def coverage_plot(gene_name, bwacycle_coverage, irma_coverage, insaflu_coverage=None, output_dir=".", sample_name=""):
+    """Builds coverage plot of all tools for each gene"""
     bwacycle_coverage = [int(i) for i in bwacycle_coverage]
     irma_coverage = [int(i) for i in irma_coverage]
+
+    # Lists must be the same length
     length_diff = len(bwacycle_coverage) - len(irma_coverage)
     if length_diff > 0:
         irma_coverage.extend([0 for i in range(abs(length_diff))])
     else:
         bwacycle_coverage.extend([0 for i in range(abs(length_diff))])
-    # print(len(bwacycle_coverage) == len(irma_coverage))
+
     gene_coverage = {"Position": [i for i in range(1, len(irma_coverage) + 1)],
                      "bwacycle_coverage": bwacycle_coverage, "irma_coverage": irma_coverage}
 
@@ -176,7 +197,7 @@ def make_irma_variants_table(path_to_irma_output, sample_name=""):
     with open(f"{sample_name}_irma_variants.tsv", "w") as variants_out:
         for file in ordered_filenames:
             with open(f"{path_to_irma_output}/tables/{file}", "r") as gene_variants:
-                gene_variants.readline()
+                gene_variants.readline()  # skip header
                 for line in gene_variants:
                     temp_line = line.strip().split()
                     variants_out.write(
@@ -187,7 +208,8 @@ def get_insaflu_variants_file_name(path_to_insaflu_dir):
     return [file for file in os.listdir(path_to_insaflu_dir) if file.endswith("variants.tsv")][0]
 
 
-def check_isaflu_gene_names(path_to_insaflu_dir):
+def check_insaflu_gene_names(path_to_insaflu_dir):
+    """Returns True if insaflu gene names are such as expected, else returns False"""
     variants_table = get_insaflu_variants_file_name(path_to_insaflu_dir)
     genes = set(GENE_NAMES)
     with open(f"{path_to_insaflu_dir}{variants_table}", "r") as insaflu_variants:
@@ -199,11 +221,15 @@ def check_isaflu_gene_names(path_to_insaflu_dir):
 
 
 def build_variant_tables(bwacycle_dir, irma_dir, gaps_matrix, insaflu_dir=None, sample_name=""):
+    """Writes variants found for eadh gene by all tools in a separate file."""
     gene_variants_tables = [[], [], [], [], [], [], [], []]
+
     # Write IRMA variants to the variants table
+
     irma_gene_names = sorted(get_irma_gene_names(irma_dir))
     ordered_irma_genes = [irma_gene_names[7], irma_gene_names[6], irma_gene_names[5], irma_gene_names[0],
                           irma_gene_names[3], irma_gene_names[2], irma_gene_names[1], irma_gene_names[4]]
+
     with open(f"{sample_name}_irma_variants.tsv", "r") as irma_variants:
         for line in irma_variants:
             temp_line = line.strip().split()
@@ -236,7 +262,7 @@ def build_variant_tables(bwacycle_dir, irma_dir, gaps_matrix, insaflu_dir=None, 
 
     # Write insaflu variants to the variants table
     if insaflu_dir:
-        if not check_isaflu_gene_names(insaflu_dir):
+        if not check_insaflu_gene_names(insaflu_dir):
             print("WARNING! INSaFLU gene names do not match these:{}. The output will be incorrect".format(
                 " ".join(ORDERED_GENES)))
         with open(f"{insaflu_dir}{get_insaflu_variants_file_name(insaflu_dir)}", "r") as insaflu_variants:
@@ -263,6 +289,7 @@ def build_variant_tables(bwacycle_dir, irma_dir, gaps_matrix, insaflu_dir=None, 
 
 
 def plot_variants(sample_name="", output_dir="."):
+    """Builds a graph comparing variant found by all tools in a separate gene"""
     variant_tables = sorted(os.listdir("separate_genes/variants"))
     if len(variant_tables) != 8:
         raise EightError("WARNING! There are not 8 tables in the separate_genes/variants directory")
@@ -291,6 +318,8 @@ def parse_args(argv):
     irma_coverage_paths = sorted((get_irma_coverage_file_paths(argv[2])))
     irma_fasta_paths = sorted(get_irma_fasta_paths(argv[2]))
     bwacycle_fasta_path = f"{argv[1]}/{argv[1].split('/')[-2]}.fasta"
+
+    # Arrange in the accepted order (PB2, PB1, PA, HA, NP, N, M, NS)
     ordered_irma_fasta_paths = [irma_fasta_paths[7], irma_fasta_paths[6], irma_fasta_paths[5], irma_fasta_paths[0],
                                 irma_fasta_paths[3], irma_fasta_paths[2], irma_fasta_paths[1], irma_fasta_paths[4]]
 
@@ -322,16 +351,14 @@ def main(sample_name, insaflu, insaflu_fasta_path, insaflu_sample_dir,
         insaflu_gene_coverage = insaflu_coverage[i] if insaflu else None
         bwacycle_coverage = get_bwacycle_gene_coverage(bwacycle_coverage_paths[i])
         irma_coverage = get_irma_gene_coverage(irma_coverage_paths[i])
-        coverage_plot(GENE_NAMES[i], get_bwacycle_gene_coverage(bwacycle_coverage_paths[i]),
-                      get_irma_gene_coverage(irma_coverage_paths[i]), output_dir=coverage_images_dir,
-                      sample_name=sample_name, insaflu_coverage=insaflu_gene_coverage)
+        coverage_plot(GENE_NAMES[i], bwacycle_coverage, irma_coverage,
+                      output_dir=coverage_images_dir, sample_name=sample_name,
+                      insaflu_coverage=insaflu_gene_coverage)
 
     print(f"Images are saved to {coverage_images_dir}")
 
     # Processing .fasta files
     print("Processing .fasta files")
-
-    # Arrange in the accepted order (PB2, PB1, PA, HA, NP, N, M, NS)
 
     print("Writing genes to separate .fasta files")
     separate_genes(bwacycle_fasta_path, ordered_irma_fasta_paths, sample_name=sample_name,
